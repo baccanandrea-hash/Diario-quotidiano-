@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#315efb">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>Diario Quotidiano</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--ink:#172033;--muted:#718096;--line:#e6eaf1;--blue:#315efb;--blue2:#eaf0ff;--green:#16845b;--red:#bd4a4a;--shadow:0 5px 20px rgba(25,40,70,.06)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:22px 18px 14px;max-width:760px;margin:auto}h1{font-size:25px;letter-spacing:-.5px;margin:0}header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+main{max-width:760px;margin:auto;padding:0 14px 100px}.datebar{display:flex;align-items:center;gap:10px;margin:8px 0 14px}.datebar input{flex:1}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0;box-shadow:var(--shadow)}
+.hero{background:#172b55;color:#fff;border:0}.hero .muted{color:#c5d1ed}.hero strong{font-size:31px;display:block;letter-spacing:-1px;margin-top:3px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{padding:14px;border:1px solid var(--line);border-radius:15px;background:#fff;min-width:0}.metric .label{color:var(--muted);font-size:12px}.metric strong{display:block;font-size:24px;margin-top:4px;letter-spacing:-.5px}.metric small{color:var(--muted)}
+h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:16px 0 8px}.muted,.small{color:var(--muted)}.small{font-size:12px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:7px 5px calc(7px + env(safe-area-inset-bottom));z-index:5}
+nav button{border:0;background:none;color:var(--muted);font-size:11px;padding:7px 2px;border-radius:12px}nav button span{display:block;font-size:20px;margin-bottom:2px}nav button.active{background:var(--blue2);color:var(--blue);font-weight:700}
+section{display:none}section.active{display:block}
+label{display:block;font-size:13px;font-weight:650;margin:12px 0 5px}input,select{width:100%;border:1px solid #dce2ec;border-radius:11px;padding:12px;font:inherit;background:#fff;color:var(--ink);min-height:45px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.seg{display:flex;gap:8px}.seg button{flex:1}
+button.primary,button.secondary,button.danger{border:0;border-radius:12px;padding:12px 14px;font:600 14px system-ui;cursor:pointer}
+button.primary{background:var(--blue);color:#fff;width:100%;margin-top:14px}button.secondary{background:var(--blue2);color:var(--blue)}button.danger{background:#fff0f0;color:var(--red)}
+button:disabled{opacity:.5}
+.entry{border-top:1px solid var(--line);padding:12px 0}.entry:first-child{border-top:0}.entrytop{display:flex;justify-content:space-between;gap:8px}.entry strong{font-size:14px}.entry .meta{font-size:12px;color:var(--muted);margin-top:3px}.actions{display:flex;gap:7px;margin-top:8px}.actions button{padding:7px 10px;font-size:12px}
+.empty{color:var(--muted);font-size:13px;padding:8px 0}
+.chartwrap{height:210px;width:100%;position:relative}.chartwrap canvas{width:100%;height:100%}
+.barline{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line)}.barline:last-child{border:0}
+.hidden{display:none!important}.notice{background:#f0f4ff;color:#344b84;padding:11px;border-radius:12px;font-size:12px;margin-top:10px}
+@media(min-width:600px){main{padding-left:20px;padding-right:20px}.grid{gap:14px}}
+</style>
+</head>
+<body>
+<header><h1>Diario Quotidiano</h1><p>Alimentazione · Movimento · Peso · Storico</p></header>
+<main>
+<div class="datebar"><label for="day" style="margin:0;white-space:nowrap">Giornata</label><input id="day" type="date"><button class="secondary" id="todayBtn">Oggi</button></div>
+
+<section id="home" class="active">
+ <div class="card hero"><div class="muted">Riepilogo della giornata</div><strong id="homeDate">—</strong><div class="muted small">Dati registrati per la data selezionata</div></div>
+ <div class="grid">
+  <div class="metric"><div class="label">Calorie assunte</div><strong id="homeIn">0</strong><small>kcal registrate</small></div>
+  <div class="metric"><div class="label">Consumo giornaliero</div><strong id="homeSedentary">—</strong><small>stima con lavoro sedentario</small></div>
+  <div class="metric"><div class="label">Calorie sport</div><strong id="homeAct">0</strong><small>aggiunte quando ti alleni</small></div>
+  <div class="metric"><div class="label">Deficit / surplus</div><strong id="homeBalanceTop">—</strong><small>differenza tra assunte e consumate</small></div>
+  <div class="metric"><div class="label">Peso registrato</div><strong id="homeWeight">—</strong><small>ultima misurazione disponibile</small></div>
+ </div>
+ <div class="card"><h2>Andamento del peso</h2><div class="chartwrap"><canvas id="weightChart"></canvas></div><div id="chartEmpty" class="empty hidden">Registra almeno due pesi per vedere l'andamento.</div></div>
+ <div class="card"><h2>Bilancio energetico stimato</h2>
+  <div class="barline"><span>Consumo giornaliero di base</span><strong id="homeDailyBase">—</strong></div>
+  <div class="barline"><span>Sport aggiunto</span><strong id="homeDailySport">—</strong></div>
+  <div class="barline"><span>Consumo totale stimato</span><strong id="homeTotalBurn">—</strong></div>
+  <div class="barline"><span>Differenza tra calorie assunte e consumate</span><strong id="homeBalance">—</strong></div>
+  <div class="notice">Stime indicative. Il consumo giornaliero di base comprende già il normale movimento di una giornata sedentaria. Quando fai sport, aggiungi solo le calorie dell'attività, non le calorie basali/a riposo Garmin.</div>
+ </div>
+ <div class="card"><h2>Riepilogo alimentazione</h2><div id="homeFoods" class="empty">Nessuna registrazione per questa giornata.</div></div>
+ <div class="card"><h2>Riepilogo attività</h2><div id="homeActivities" class="empty">Nessuna attività registrata.</div></div>
+</section>
+
+<section id="insert">
+ <div class="card">
+  <h2>Alimentazione</h2>
+  <div class="seg"><button class="secondary" id="quickMode">Calorie totali</button><button class="secondary" id="detailMode">Alimenti singoli</button></div>
+  <div id="quickFields">
+   <label for="quickKcal">Calorie del pasto / spuntino</label><input id="quickKcal" type="number" min="0" step="1" placeholder="Es. 650">
+   <label for="quickLabel">Descrizione (facoltativa)</label><input id="quickLabel" placeholder="Es. pranzo">
+  </div>
+  <div id="detailFields" class="hidden">
+   <label for="foodName">Alimento</label><input id="foodName" placeholder="Es. pasta al pomodoro">
+   <div class="row"><div><label for="foodQty">Quantità (g/ml)</label><input id="foodQty" type="number" min="0" placeholder="150"></div><div><label for="foodKcal">Calorie totali</label><input id="foodKcal" type="number" min="0" placeholder="220"></div></div>
+   <div class="small">Inserisci le calorie della quantità che hai effettivamente mangiato.</div>
+  </div>
+  <button class="primary" id="saveFood">Registra alimentazione</button>
+ </div>
+ <div class="card">
+  <h2>Attività fisica</h2>
+  <label for="activityType">Tipo di attività</label><select id="activityType"><option>Tapis roulant</option><option>Camminata</option><option>Bicicletta</option><option>Nuoto</option><option>Altro</option></select>
+  <div class="row"><div><label for="minutes">Durata (minuti)</label><input id="minutes" type="number" min="1" placeholder="30"></div><div><label for="activityKcal">Calorie Garmin / attività</label><input id="activityKcal" type="number" min="0" placeholder="Facoltativo"></div></div>
+  <div id="treadmill">
+   <div class="row"><div><label for="speed">Velocità (km/h)</label><input id="speed" type="number" min="0" step=".1" placeholder="5,5"></div><div><label for="incline">Pendenza (%)</label><input id="incline" type="number" min="0" step=".1" placeholder="1"></div></div>
+   <div class="notice">Scegli una modalità: inserisci le calorie dell'attività indicate da Garmin, oppure lascia vuoto quel campo e l'app stimerà le calorie nette del tapis roulant usando peso, durata, velocità e pendenza. Non inserire qui le calorie basali/a riposo Garmin.</div>
+  </div>
+  <label for="activityNote">Nota (facoltativa)</label><input id="activityNote" placeholder="Es. camminata mattutina">
+  <button class="primary" id="saveActivity">Registra attività</button>
+ </div>
+ <div class="card">
+  <h2>Peso</h2>
+  <label for="weight">Peso (kg)</label><input id="weight" type="number" min="0" step=".1" placeholder="Es. 70,5">
+  <button class="primary" id="saveWeight">Registra peso</button>
+ </div>
+</section>
+
+<section id="history">
+ <div class="card"><h2>Storico della giornata selezionata</h2><h3>Alimentazione</h3><div id="foodHistory" class="empty">Nessun dato.</div><h3>Attività</h3><div id="activityHistory" class="empty">Nessun dato.</div><h3>Peso</h3><div id="weightHistory" class="empty">Nessun dato.</div></div>
+ <div class="card"><h2>Tutte le registrazioni</h2><div id="allHistory" class="empty">Lo storico comparirà qui.</div></div>
+</section>
+
+<section id="graphs">
+ <div class="card">
+  <h2>Andamento nel tempo</h2>
+  <div class="seg" id="graphPeriods">
+   <button class="secondary" data-period="day">Giorno</button>
+   <button class="secondary" data-period="month">Mese</button>
+   <button class="secondary" data-period="year">Anno</button>
+  </div>
+  <p class="small" id="graphPeriodLabel">Periodo basato sulla data selezionata in alto.</p>
+  <div class="grid">
+   <div class="metric"><div class="label">Calorie introdotte</div><strong id="graphIn">0</strong><small>kcal</small></div>
+   <div class="metric"><div class="label">Calorie consumate</div><strong id="graphOut">0</strong><small>base + sport</small></div>
+   <div class="metric"><div class="label">Calorie sport</div><strong id="graphSport">0</strong><small>kcal</small></div>
+   <div class="metric"><div class="label">Tempo sport</div><strong id="graphMinutes">0</strong><small>minuti</small></div>
+  </div>
+ </div>
+ <div class="card"><h2>Calorie introdotte e consumate</h2><div class="chartwrap" style="height:250px"><canvas id="energyChart"></canvas></div><div class="small">Confronto tra calorie introdotte, consumo totale stimato e quota sportiva.</div></div>
+ <div class="card"><h2>Attività sportiva</h2><div class="chartwrap" style="height:220px"><canvas id="sportChart"></canvas></div><div class="small">Minuti di attività per giorno o mese.</div></div>
+ <div class="card"><h2>Dettaglio del periodo</h2><div id="graphDetails" class="empty">Nessun dato disponibile.</div></div>
+</section>
+
+<section id="settings">
+ <div class="card"><h2>Profilo e metabolismo</h2>
+  <div class="row"><div><label for="birthDate">Data di nascita</label><input id="birthDate" type="date" ></div><div><label for="heightCm">Altezza (cm)</label><input id="heightCm" type="number" min="100" max="230" ></div></div>
+  <label for="sex">Sesso per la formula metabolica</label><select id="sex"><option value="">Seleziona</option><option value="male">Maschile</option><option value="female">Femminile</option></select>
+  <p class="small">Il consumo giornaliero di base viene stimato considerando il tuo profilo e una giornata sedentaria. Quando fai sport, aggiungi l'attività: le sue calorie si sommano al consumo di base.</p>
+  <button class="primary" id="saveProfile">Salva profilo</button>
+ </div>
+ <div class="card"><h2>Impostazioni e dati</h2>
+  <p class="small">Il diario viene salvato in questo browser sul dispositivo. Non è sincronizzato automaticamente con Internet o altri telefoni. Esporta regolarmente una copia di sicurezza.</p>
+  <button class="secondary" id="exportBtn" style="width:100%">Esporta backup</button>
+  <label for="importFile">Ripristina backup</label><input id="importFile" type="file" accept="application/json">
+  <button class="danger" id="clearBtn" style="width:100%;margin-top:16px">Cancella tutti i dati</button>
+ </div>
+</section>
+</main>
+<nav>
+ <button class="active" data-tab="home"><span>⌂</span>Home</button>
+ <button data-tab="insert"><span>＋</span>Inserisci</button>
+ <button data-tab="history"><span>▤</span>Storico</button>
+ <button data-tab="graphs"><span>▥</span>Grafici</button>
+ <button data-tab="settings"><span>⚙</span>Dati</button>
+</nav>
+<script>
+(()=> {
+const $=id=>document.getElementById(id);
+const isoToday=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+const emptyDB=()=>({foods:[],activities:[],weights:[],settings:{birthDate:'',height:'',sex:''}});
+let db;
+try{db=JSON.parse(localStorage.getItem('diarioQuotidianoV1'))||emptyDB()}catch{db=emptyDB()}
+db.foods??=[];db.activities??=[];db.weights??=[];db.settings??={};db.settings.birthDate??='';db.settings.height??='';db.settings.sex??='';
+$('birthDate').value=db.settings.birthDate;$('heightCm').value=db.settings.height;$('sex').value=db.settings.sex;
+$('day').value=isoToday();
+let mode='quick';let graphPeriod='day';
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const num=id=>Math.max(0,Number($(id).value)||0);
+const fmt=n=>Math.round(n).toLocaleString('it-IT');
+const dateLabel=s=>s?new Date(s+'T12:00:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'';
+function save(){localStorage.setItem('diarioQuotidianoV1',JSON.stringify(db));render()}
+function selected(){return $('day').value||isoToday()}
+function setMode(m){mode=m;$('quickFields').classList.toggle('hidden',m!=='quick');$('detailFields').classList.toggle('hidden',m!=='detail');$('quickMode').style.background=m==='quick'?'#dce6ff':'#eaf0ff';$('detailMode').style.background=m==='detail'?'#dce6ff':'#eaf0ff'}
+$('quickMode').onclick=()=>setMode('quick');$('detailMode').onclick=()=>setMode('detail');setMode('quick');
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('main section').forEach(s=>s.classList.toggle('active',s.id===b.dataset.tab));render()});
+document.querySelectorAll('#graphPeriods button').forEach(b=>b.onclick=()=>{graphPeriod=b.dataset.period;document.querySelectorAll('#graphPeriods button').forEach(x=>{x.style.background=x===b?'#dce6ff':'#eaf0ff';x.style.fontWeight=x===b?'700':'500'});renderGraphs()});
+document.querySelector('#graphPeriods button[data-period="day"]').style.background='#dce6ff';
+$('day').onchange=render;$('todayBtn').onclick=()=>{$('day').value=isoToday();render()};
+$('saveProfile').onclick=()=>{const h=Number($('heightCm').value);if(!$('birthDate').value||h<100||h>230||!$('sex').value)return alert('Controlla data di nascita e altezza.');db.settings={birthDate:$('birthDate').value,height:h,sex:$('sex').value};save();alert('Profilo salvato. Il metabolismo viene aggiornato automaticamente con il peso.');};
+$('activityType').onchange=()=>{$('treadmill').classList.toggle('hidden',$('activityType').value!=='Tapis roulant')};
+$('saveFood').onclick=()=>{
+ let kcal,label;
+ if(mode==='quick'){kcal=num('quickKcal');label=$('quickLabel').value.trim()||'Alimentazione'}
+ else{kcal=num('foodKcal');label=$('foodName').value.trim();if(!label||!num('foodQty'))return alert('Inserisci alimento e quantità.')}
+ if(!kcal)return alert('Inserisci le calorie.');db.foods.push({id:uid(),date:selected(),label,kcal,detail:mode==='detail'?`${num('foodQty')} g/ml`:''});$('quickKcal').value=$('quickLabel').value=$('foodName').value=$('foodQty').value=$('foodKcal').value='';save();
+};
+$('saveActivity').onclick=()=>{
+ const type=$('activityType').value,minutes=num('minutes'),garmin=num('activityKcal'),speed=num('speed'),incline=num('incline');
+ if(!minutes&&!garmin)return alert('Inserisci almeno la durata o le calorie registrate.');
+ db.activities.push({id:uid(),date:selected(),type,minutes,garmin,speed,incline,note:$('activityNote').value.trim()});
+ ['minutes','activityKcal','speed','incline','activityNote'].forEach(id=>$(id).value='');save();
+};
+$('saveWeight').onclick=()=>{const kg=num('weight');if(!kg)return alert('Inserisci un peso valido.');db.weights.push({id:uid(),date:selected(),kg});$('weight').value='';save()};
+function cardFood(x){return `<div class="entry"><div class="entrytop"><strong>${esc(x.label)}</strong><strong>${fmt(x.kcal)} kcal</strong></div><div class="meta">${x.date}${x.detail?' · '+esc(x.detail):''}</div><div class="actions"><button class="secondary" onclick="editFood('${x.id}')">Modifica</button><button class="danger" onclick="delFood('${x.id}')">Elimina</button></div></div>`}
+function cardActivity(x){return `<div class="entry"><div class="entrytop"><strong>${esc(x.type)}</strong><strong>${activityCalories(x)?fmt(activityCalories(x))+' kcal':''}</strong></div><div class="meta">${x.date} · ${x.minutes||0} min${x.speed?' · '+x.speed+' km/h':''}${x.incline?' · pendenza '+x.incline+'%':''}${x.note?' · '+esc(x.note):''}</div><div class="actions"><button class="secondary" onclick="editActivity('${x.id}')">Modifica</button><button class="danger" onclick="delActivity('${x.id}')">Elimina</button></div></div>`}
+function cardWeight(x){return `<div class="entry"><div class="entrytop"><strong>${x.kg.toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})} kg</strong><span class="meta">${x.date}</span></div><div class="actions"><button class="secondary" onclick="editWeight('${x.id}')">Modifica</button><button class="danger" onclick="delWeight('${x.id}')">Elimina</button></div></div>`}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+window.delFood=id=>{if(confirm('Eliminare questa registrazione?')){db.foods=db.foods.filter(x=>x.id!==id);save()}};
+window.delActivity=id=>{if(confirm('Eliminare questa attività?')){db.activities=db.activities.filter(x=>x.id!==id);save()}};
+window.delWeight=id=>{if(confirm('Eliminare questa misurazione?')){db.weights=db.weights.filter(x=>x.id!==id);save()}};
+window.editFood=id=>{const x=db.foods.find(x=>x.id===id);if(!x)return;const label=prompt('Descrizione',x.label);if(label===null)return;const kcal=prompt('Calorie',x.kcal);if(kcal===null)return;const date=prompt('Data (AAAA-MM-GG)',x.date);if(date===null)return; x.label=label;x.kcal=Math.max(0,Number(kcal)||0);x.date=date;save()};
+window.editActivity=id=>{const x=db.activities.find(x=>x.id===id);if(!x)return;const date=prompt('Data (AAAA-MM-GG)',x.date);if(date===null)return;const mins=prompt('Durata in minuti',x.minutes);if(mins===null)return;const kcal=prompt('Calorie Garmin (0 se non disponibili)',x.garmin);if(kcal===null)return;x.date=date;x.minutes=Math.max(0,Number(mins)||0);x.garmin=Math.max(0,Number(kcal)||0);save()};
+window.editWeight=id=>{const x=db.weights.find(x=>x.id===id);if(!x)return;const kg=prompt('Peso in kg',x.kg);if(kg===null)return;const date=prompt('Data (AAAA-MM-GG)',x.date);if(date===null)return;x.kg=Math.max(0,Number(kg)||0);x.date=date;save()};
+function drawChart(items){const c=$('weightChart'),ctx=c.getContext('2d'),wrap=c.parentElement,rect=wrap.getBoundingClientRect(),dpr=window.devicePixelRatio||1;c.width=rect.width*dpr;c.height=rect.height*dpr;ctx.scale(dpr,dpr);ctx.clearRect(0,0,rect.width,rect.height);
+ const arr=[...items].sort((a,b)=>a.date.localeCompare(b.date));$('chartEmpty').classList.toggle('hidden',arr.length>=2);if(arr.length<2)return;
+ const W=rect.width,H=rect.height,p={l:38,r:12,t:12,b:28},vals=arr.map(x=>x.kg),min=Math.min(...vals)-1,max=Math.max(...vals)+1,span=max-min||1;
+ ctx.font='11px system-ui';ctx.fillStyle='#718096';ctx.strokeStyle='#e8edf4';ctx.lineWidth=1;
+ for(let i=0;i<4;i++){let y=p.t+(H-p.t-p.b)*i/3;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(W-p.r,y);ctx.stroke();ctx.fillText((max-(span*i/3)).toFixed(1),2,y+4)}
+ const pts=arr.map((x,i)=>({x:p.l+(W-p.l-p.r)*i/(arr.length-1),y:p.t+(H-p.t-p.b)*(max-x.kg)/span}));
+ ctx.strokeStyle='#315efb';ctx.lineWidth=2.5;ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y));ctx.stroke();pts.forEach((q,i)=>{ctx.fillStyle='#315efb';ctx.beginPath();ctx.arc(q.x,q.y,3.5,0,Math.PI*2);ctx.fill();if(i===0||i===pts.length-1){ctx.fillStyle='#718096';ctx.fillText(arr[i].date.slice(5),q.x-15,H-7)}});
+}
+function ageAt(dateStr){const b=new Date((db.settings.birthDate||'')+'T12:00:00'),d=new Date(dateStr+'T12:00:00');let a=d.getFullYear()-b.getFullYear();if(d.getMonth()<b.getMonth()||(d.getMonth()===b.getMonth()&&d.getDate()<b.getDate()))a--;return Math.max(0,a)}
+function weightAt(dateStr){const w=[...db.weights].filter(x=>x.date<=dateStr).sort((a,b)=>b.date.localeCompare(a.date))[0];return w?.kg||null}
+function bmrAt(dateStr){const kg=weightAt(dateStr);if(!kg||!db.settings.height||!db.settings.birthDate||!db.settings.sex)return null;const age=ageAt(dateStr);return 10*kg+6.25*Number(db.settings.height)-5*age+(db.settings.sex==='female'?-161:5)}
+function activityCalories(x){if(Number(x.garmin)>0)return Number(x.garmin);if(x.type!=='Tapis roulant'||!x.minutes||!x.speed)return 0;const kg=weightAt(x.date);if(!kg)return 0;const v=Number(x.speed)*1000/60,grade=(Number(x.incline)||0)/100;const vo2=0.1*v+1.8*v*grade+3.5;const gross=vo2*kg/1000*5*Number(x.minutes);const rest=3.5*kg/1000*5*Number(x.minutes);return Math.max(0,gross-rest)}
+function periodRows(){
+ const selectedDate=selected(),y=Number(selectedDate.slice(0,4)),m=Number(selectedDate.slice(5,7))-1;
+ let keys=[],labels=[];
+ if(graphPeriod==='day'){keys=[selectedDate];labels=[selectedDate.slice(8,10)+'/'+selectedDate.slice(5,7)]}
+ else if(graphPeriod==='month'){const days=new Date(y,m+1,0).getDate();for(let d=1;d<=days;d++){keys.push(`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);labels.push(String(d))}}
+ else {for(let mm=0;mm<12;mm++){keys.push(`${y}-${String(mm+1).padStart(2,'0')}`);labels.push(['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][mm])}}
+ return keys.map((key,i)=>{
+  const start=graphPeriod==='year'?key+'-01':key;
+  const end=graphPeriod==='year'?key+'-31':key;
+  const fs=db.foods.filter(x=>graphPeriod==='year'?x.date.startsWith(key):x.date===key);
+  const as=db.activities.filter(x=>graphPeriod==='year'?x.date.startsWith(key):x.date===key);
+  const intake=fs.reduce((a,x)=>a+(Number(x.kcal)||0),0);
+  const sport=as.reduce((a,x)=>a+activityCalories(x),0);
+  const minutes=as.reduce((a,x)=>a+(Number(x.minutes)||0),0);
+  let base=0,daysCount=1;
+  if(graphPeriod==='year'){daysCount=new Date(y,i+1,0).getDate();for(let day=1;day<=daysCount;day++){const dt=`${y}-${String(i+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`,b=bmrAt(dt);if(b)base+=b*1.2}}
+  else {const b=bmrAt(key);base=b?b*1.2:0}
+  return {key,label:labels[i],intake,sport,minutes,base,total:base+sport,daysCount};
+ });
+}
+function drawBarChart(canvasId,rows,series,unit){
+ const c=$(canvasId);if(!c)return;const wrap=c.parentElement,rect=wrap.getBoundingClientRect();if(rect.width<10)return;
+ const dpr=window.devicePixelRatio||1,W=rect.width,H=rect.height;c.width=W*dpr;c.height=H*dpr;
+ const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ const pad={l:38,r:8,t:32,b:32},plotW=W-pad.l-pad.r,plotH=H-pad.t-pad.b;
+ const maxVal=Math.max(1,...rows.flatMap(r=>series.map(q=>r[q.key]||0)));const top=maxVal*1.12;
+ ctx.font='10px system-ui';ctx.fillStyle='#718096';ctx.strokeStyle='#e8edf4';ctx.lineWidth=1;
+ for(let i=0;i<4;i++){const y=pad.t+plotH*i/3;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();ctx.fillText(fmt(top*(1-i/3)),2,y+3)}
+ const groupW=plotW/Math.max(1,rows.length),barW=Math.max(2,Math.min(15,groupW/(series.length+1)));
+ rows.forEach((r,i)=>{const gx=pad.l+i*groupW+groupW/2;series.forEach((q,j)=>{const v=r[q.key]||0,h=(v/top)*plotH,x=gx-(series.length*barW+(series.length-1)*2)/2+j*(barW+2);ctx.fillStyle=q.color;ctx.fillRect(x,pad.t+plotH-h,barW,h)});
+  const show=graphPeriod==='day'||graphPeriod==='year'||i===0||i===rows.length-1||i%5===0;
+  if(show){ctx.fillStyle='#718096';ctx.textAlign='center';ctx.fillText(r.label,gx,H-10)}
+ });
+ let lx=pad.l;ctx.font='10px system-ui';ctx.textAlign='left';series.forEach(q=>{ctx.fillStyle=q.color;ctx.fillRect(lx,pad.t-19,8,8);ctx.fillStyle='#536176';ctx.fillText(q.label,lx+12,pad.t-11);lx+=ctx.measureText(q.label).width+26});
+}
+function renderGraphs(){
+ const rows=periodRows();if(!rows.length)return;
+ const sum=k=>rows.reduce((a,r)=>a+r[k],0),inTotal=sum('intake'),sportTotal=sum('sport'),mins=sum('minutes'),baseTotal=sum('base'),outTotal=baseTotal+sportTotal;
+ $('graphIn').textContent=fmt(inTotal);$('graphOut').textContent=fmt(outTotal);$('graphSport').textContent=fmt(sportTotal);$('graphMinutes').textContent=fmt(mins);
+ const d=selected(),y=d.slice(0,4),m=Number(d.slice(5,7))-1;
+ $('graphPeriodLabel').textContent=graphPeriod==='day'?'Giornata: '+dateLabel(d):graphPeriod==='month'?`Mese: ${new Date(y,m,1).toLocaleDateString('it-IT',{month:'long',year:'numeric'})}`:`Anno: ${y}`;
+ drawBarChart('energyChart',rows,[{key:'intake',label:'Entrate',color:'#315efb'},{key:'total',label:'Consumo totale',color:'#16845b'},{key:'sport',label:'Sport',color:'#e19a35'}],'kcal');
+ drawBarChart('sportChart',rows,[{key:'minutes',label:'Minuti sport',color:'#8156c7'}],'min');
+ $('graphDetails').innerHTML=rows.map(r=>`<div class="barline"><span><b>${r.label}</b><br><span class="small">Entrate ${fmt(r.intake)} · Consumo ${fmt(r.total)} · Sport ${fmt(r.sport)} kcal · ${fmt(r.minutes)} min</span></span><strong>${r.total&&r.intake?(r.intake<r.total?'Deficit ':'Surplus ')+fmt(Math.abs(r.intake-r.total))+' kcal':'—'}</strong></div>`).join('');
+}
+function render(){
+ const d=selected(),foods=db.foods.filter(x=>x.date===d),acts=db.activities.filter(x=>x.date===d),weights=db.weights.filter(x=>x.date===d);
+ const total=foods.reduce((s,x)=>s+x.kcal,0),activity=acts.reduce((s,x)=>s+activityCalories(x),0);
+ const bmr=bmrAt(d),sedentary=bmr?bmr*1.2:null,totalBurn=sedentary===null?null:sedentary+activity,balance=totalBurn===null?null:total-totalBurn;
+ $('homeDate').textContent=dateLabel(d);$('homeIn').textContent=fmt(total);$('homeAct').textContent=fmt(activity);$('homeSedentary').textContent=sedentary?fmt(sedentary)+' kcal':'—';
+ $('homeDailyBase').textContent=sedentary?fmt(sedentary)+' kcal':'—';$('homeDailySport').textContent=fmt(activity)+' kcal';$('homeTotalBurn').textContent=totalBurn?fmt(totalBurn)+' kcal':'—';
+ const balanceText=(!foods.length||balance===null)?'—':(balance<0?'Deficit '+fmt(Math.abs(balance))+' kcal':balance>0?'Surplus '+fmt(balance)+' kcal':'In pareggio');
+ $('homeBalance').textContent=balanceText;$('homeBalanceTop').textContent=balanceText;$('homeBalance').style.color=(!foods.length||balance===null)?'':'#'+(balance>0?'bd4a4a':'16845b');$('homeBalanceTop').style.color=(!foods.length||balance===null)?'':'#'+(balance>0?'bd4a4a':'16845b');
+ const prior=[...db.weights].filter(x=>x.date<=d).sort((a,b)=>b.date.localeCompare(a.date))[0];
+ $('homeWeight').textContent=prior?prior.kg.toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1})+' kg':'—';
+ $('homeFoods').innerHTML=foods.length?foods.map(x=>`<div class="barline"><span>${esc(x.label)}</span><strong>${fmt(x.kcal)} kcal</strong></div>`).join(''):'<div class="empty">Nessuna registrazione per questa giornata.</div>';
+ $('homeActivities').innerHTML=acts.length?acts.map(x=>`<div class="barline"><span>${esc(x.type)} · ${x.minutes||0} min</span><strong>${activityCalories(x)?fmt(activityCalories(x))+' kcal':'—'}</strong></div>`).join(''):'<div class="empty">Nessuna attività registrata.</div>';
+ $('foodHistory').innerHTML=foods.length?foods.map(cardFood).join(''):'<div class="empty">Nessun alimento.</div>';
+ $('activityHistory').innerHTML=acts.length?acts.map(cardActivity).join(''):'<div class="empty">Nessuna attività.</div>';
+ $('weightHistory').innerHTML=weights.length?weights.map(cardWeight).join(''):'<div class="empty">Nessun peso in questa data.</div>';
+ const all=[...db.foods.map(x=>({...x,kind:'Cibo',desc:fmt(x.kcal)+' kcal'})),...db.activities.map(x=>({...x,kind:'Attività',desc:x.type})),...db.weights.map(x=>({...x,kind:'Peso',desc:x.kg+' kg'}))].sort((a,b)=>b.date.localeCompare(a.date));
+ $('allHistory').innerHTML=all.length?all.map(x=>`<div class="barline"><span><b>${x.kind}</b> · ${esc(x.desc)}</span><span class="small">${x.date}</span></div>`).join(''):'<div class="empty">Lo storico comparirà qui.</div>';
+ drawChart(db.weights);if($('graphs').classList.contains('active'))renderGraphs();
+}
+$('exportBtn').onclick=()=>{const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup_diario_'+isoToday()+'.json';a.click();URL.revokeObjectURL(a.href)};
+$('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const v=JSON.parse(await f.text());if(!Array.isArray(v.foods)||!Array.isArray(v.activities)||!Array.isArray(v.weights))throw Error();if(confirm('Sostituire i dati attuali con quelli del backup?')){db=v;db.settings??={};db.settings.birthDate??='';db.settings.height??='';db.settings.sex??='';$('birthDate').value=db.settings.birthDate;$('heightCm').value=db.settings.height;$('sex').value=db.settings.sex;save();alert('Backup ripristinato.')}}catch{alert('File di backup non valido.')}e.target.value=''};
+$('clearBtn').onclick=()=>{if(confirm('Vuoi cancellare definitivamente tutte le registrazioni da questo browser?')){db=emptyDB();save()}};
+window.addEventListener('resize',()=>drawChart(db.weights));localStorage.setItem('diarioQuotidianoV1',JSON.stringify(db));render();
+})();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(()=>{}));}</script>
+</body></html>
